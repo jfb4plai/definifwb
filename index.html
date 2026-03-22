@@ -184,15 +184,18 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
       </div>
       <div class="tab-pane on" id="tp-connexion">
         <div class="fld"><label>Email</label><input id="li-email" type="email" placeholder="votre@email.com" autocomplete="email"></div>
-        <div class="fld"><label>Mot de passe</label><input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-        <button class="btn btn-p btn-w" onclick="login()">Se connecter</button>
+        <div class="fld"><label>Mot de passe</label><input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"></div>
+        <div id="li-err" style="display:none;background:var(--rl);color:#7F1D1D;border:1px solid var(--rm);border-radius:var(--rmd);padding:10px 12px;font-size:13px;margin-bottom:10px"></div>
+        <button class="btn btn-p btn-w" id="btn-login" onclick="login()">Se connecter</button>
+        <p class="hint" style="text-align:center;margin-top:10px">Même compte que FlashFWB si tu en as un.</p>
       </div>
       <div class="tab-pane" id="tp-inscription">
         <div class="fld"><label>Votre prénom / nom</label><input id="re-nom" type="text" placeholder="Marie Dupont"></div>
         <div class="fld"><label>Email</label><input id="re-email" type="email" placeholder="votre@email.com"></div>
         <div class="fld"><label>Mot de passe</label><input id="re-pass" type="password" placeholder="8 caractères minimum"></div>
-        <button class="btn btn-p btn-w" onclick="register()">Créer mon compte</button>
-        <p class="hint" style="text-align:center;margin-top:10px">Un email de confirmation sera envoyé.</p>
+        <div id="re-err" style="display:none;background:var(--rl);color:#7F1D1D;border:1px solid var(--rm);border-radius:var(--rmd);padding:10px 12px;font-size:13px;margin-bottom:10px"></div>
+        <div id="re-ok" style="display:none;background:var(--gl);color:#065F46;border:1px solid var(--gm);border-radius:var(--rmd);padding:10px 12px;font-size:13px;margin-bottom:10px"></div>
+        <button class="btn btn-p btn-w" id="btn-register" onclick="register()">Créer mon compte</button>
       </div>
     </div>
   </div>
@@ -417,23 +420,58 @@ function authTab(tab) {
   document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('on');
   document.getElementById('tp-' + tab).classList.add('on');
 }
+function liErr(msg) {
+  const el = document.getElementById('li-err');
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+  else el.style.display = 'none';
+}
+function reErr(msg) {
+  const el = document.getElementById('re-err');
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+  else el.style.display = 'none';
+}
+function reOk(msg) {
+  const el = document.getElementById('re-ok');
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+  else el.style.display = 'none';
+}
 async function login() {
+  liErr('');
   const email = document.getElementById('li-email').value.trim();
   const pass  = document.getElementById('li-pass').value;
-  if (!email || !pass) return toast('Remplis tous les champs');
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) return toast('Erreur : ' + error.message);
-  user = data.user; await loadDash(); show('v-dash');
+  if (!email || !pass) return liErr('Remplis l\'email et le mot de passe.');
+  if (!sb) return liErr('Connexion au serveur impossible. Vérifie ta connexion internet.');
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Connexion en cours...';
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { liErr('Erreur : ' + error.message); return; }
+    user = data.user; await loadDash(); show('v-dash');
+  } catch(e) {
+    liErr('Erreur inattendue : ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Se connecter';
+  }
 }
 async function register() {
+  reErr(''); reOk('');
   const nom   = document.getElementById('re-nom').value.trim();
   const email = document.getElementById('re-email').value.trim();
   const pass  = document.getElementById('re-pass').value;
-  if (!nom || !email || !pass) return toast('Remplis tous les champs');
-  if (pass.length < 8) return toast('Mot de passe : 8 caractères minimum');
-  const { error } = await sb.auth.signUp({ email, password: pass, options:{ data:{ nom } } });
-  if (error) return toast('Erreur : ' + error.message);
-  toast('Compte créé ! Vérifie ton email pour confirmer.', 4000);
+  if (!nom || !email || !pass) return reErr('Remplis tous les champs.');
+  if (pass.length < 8) return reErr('Mot de passe : 8 caractères minimum.');
+  if (!sb) return reErr('Connexion au serveur impossible.');
+  const btn = document.getElementById('btn-register');
+  btn.disabled = true; btn.textContent = 'Création en cours...';
+  try {
+    const { error } = await sb.auth.signUp({ email, password: pass, options:{ data:{ nom } } });
+    if (error) { reErr('Erreur : ' + error.message); return; }
+    reOk('✅ Compte créé ! Vérifie ta boîte mail pour confirmer, puis connecte-toi.');
+  } catch(e) {
+    reErr('Erreur inattendue : ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer mon compte';
+  }
 }
 async function logout() {
   await sb.auth.signOut(); user = null; show('v-login');
