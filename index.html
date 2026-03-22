@@ -62,6 +62,16 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
 .img-upload-btn{cursor:pointer;margin:0}
 .img-upload-btn input{display:none}
 
+/* ===== ARASAAC PICTO GRID ===== */
+.picto-grid{display:none;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg);border:1px solid var(--pm);border-radius:var(--rmd);margin-top:6px}
+.picto-grid.on{display:flex}
+.picto-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px;border-radius:8px;border:2px solid transparent;transition:all .15s;background:var(--bg2)}
+.picto-item:hover{border-color:var(--p);background:var(--pl)}
+.picto-item.selected{border-color:var(--g);background:var(--gl)}
+.picto-item img{width:72px;height:72px;object-fit:contain;border-radius:4px}
+.picto-item span{font-size:10px;color:var(--tx2);text-align:center;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picto-loading{font-size:13px;color:var(--p);padding:8px;font-style:italic}
+
 /* ===== PRINT ===== */
 @media print {
   .no-print{display:none!important}
@@ -743,14 +753,24 @@ function renderWords() {
       </div>
       <div class="word-row-img">
         ${m.image_url
-          ? `<img class="word-thumb" src="${esc(m.image_url)}" alt="">
-             <span style="font-size:12px;color:var(--tx2);flex:1">Image ajoutée ✅</span>
-             <button class="btn btn-sm btn-r" onclick="removeImg('${m.id}')">✕</button>`
-          : `<span style="font-size:12px;color:var(--tx3)">Aucune image</span>`}
+          ? `<img class="word-thumb" src="${esc(m.image_url)}" alt=""
+               onerror="this.style.display='none'">`
+          : ''}
+        <span style="font-size:12px;color:${m.image_url ? 'var(--g)' : 'var(--tx3)'};flex:1">
+          ${m.image_url ? '✅ Image définie' : 'Aucune image'}
+        </span>
+        ${m.image_url ? `<button class="btn btn-sm btn-r" onclick="removeImg('${m.id}')">✕ Supprimer</button>` : ''}
+        <button class="btn btn-sm" style="background:var(--pl);color:var(--p);border-color:var(--pm)"
+          onclick="searchArasaac('${m.id}')">
+          🔍 ARASAAC
+        </button>
         <label class="btn btn-sm img-upload-btn">
-          🖼️ ${m.image_url ? 'Changer' : 'Ajouter image'}
+          🖼️ Fichier
           <input type="file" accept="image/*" onchange="uploadImg('${m.id}',this)">
         </label>
+      </div>
+      <div class="picto-grid" id="picto-grid-${m.id}">
+        <span class="picto-loading">Recherche en cours...</span>
       </div>
     </div>`).join('');
 }
@@ -879,7 +899,79 @@ function resetPDF() {
 }
 
 // ============================================================
-// SPRINT 3 — IMAGE PAR MOT
+// SPRINT 3 — ARASAAC PICTOGRAMMES
+// ============================================================
+async function searchArasaac(motId) {
+  const m = mots.find(x => x.id === motId);
+  if (!m) return;
+  const mot = m.mot.trim();
+  if (!mot) return toast('Entre d\'abord le mot pour chercher un picto');
+
+  const grid = document.getElementById('picto-grid-' + motId);
+  if (!grid) return;
+
+  // Toggle : si déjà ouvert, refermer
+  if (grid.classList.contains('on') && grid.dataset.query === mot) {
+    grid.classList.remove('on'); return;
+  }
+
+  grid.dataset.query = mot;
+  grid.classList.add('on');
+  grid.innerHTML = '<span class="picto-loading">🔍 Recherche ARASAAC...</span>';
+
+  try {
+    const res = await fetch(
+      `https://api.arasaac.org/v1/pictograms/fr/search/${encodeURIComponent(mot)}`
+    );
+    if (!res.ok) throw new Error('Réponse ' + res.status);
+    const data = await res.json();
+
+    if (!data || !data.length) {
+      grid.innerHTML = '<span class="picto-loading" style="color:var(--tx3)">Aucun picto trouvé pour "' + esc(mot) + '"</span>';
+      return;
+    }
+
+    const results = data.slice(0, 8);
+    grid.innerHTML = results.map(p => {
+      const url = `https://static.arasaac.org/pictograms/${p._id}/${p._id}_500.png`;
+      const label = p.keywords?.[0]?.keyword || '';
+      const isSelected = m.image_url === url;
+      return `
+        <div class="picto-item ${isSelected ? 'selected' : ''}"
+          onclick="selectPicto('${motId}','${url}',this)">
+          <img src="${url}" alt="${esc(label)}"
+            onerror="this.parentElement.style.display='none'">
+          <span>${esc(label)}</span>
+        </div>`;
+    }).join('') +
+    `<div style="width:100%;font-size:11px;color:var(--tx3);padding-top:4px">
+       Pictos © <a href="https://arasaac.org" target="_blank" style="color:var(--p)">ARASAAC</a>
+       — Licence CC BY-NC-SA
+     </div>`;
+
+  } catch(e) {
+    grid.innerHTML = `<span class="picto-loading" style="color:var(--r)">Erreur : ${e.message}</span>`;
+  }
+}
+
+async function selectPicto(motId, url, el) {
+  // Feedback visuel immédiat
+  el.closest('.picto-grid').querySelectorAll('.picto-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+
+  await updWord(motId, 'image_url', url);
+  const idx = mots.findIndex(m => m.id === motId);
+  if (idx >= 0) mots[idx].image_url = url;
+
+  // Fermer la grille après sélection
+  setTimeout(() => {
+    renderWords();
+    toast('Picto ARASAAC sélectionné ✅');
+  }, 400);
+}
+
+// ============================================================
+// SPRINT 3 — IMAGE PAR MOT (upload fichier)
 // ============================================================
 async function uploadImg(motId, input) {
   const file = input.files[0];
