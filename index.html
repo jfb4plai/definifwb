@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>DéfiniFWB — Définitions interactives pour TBI</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="config.js"></script>
 <style>
@@ -389,13 +389,30 @@ let relierLinks = {};       // motId -> defId (correct connections)
 // INIT
 // ============================================================
 async function init() {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const params = new URLSearchParams(location.search);
-  const vid = params.get('v');
-  if (vid) { await loadEleve(vid); return; }
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) { user = session.user; await loadDash(); show('v-dash'); }
-  else show('v-login');
+  // Vérification que la bibliothèque Supabase est bien chargée
+  if (typeof supabase === 'undefined' || typeof supabase.createClient !== 'function') {
+    console.error('Supabase non chargé');
+    show('v-login');
+    document.getElementById('li-err').textContent =
+      '⚠️ Bibliothèque non chargée. Rafraîchis la page (F5) ou vérifie ta connexion internet.';
+    document.getElementById('li-err').style.display = 'block';
+    return;
+  }
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const params = new URLSearchParams(location.search);
+    const vid = params.get('v');
+    if (vid) { await loadEleve(vid); return; }
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) { user = session.user; await loadDash(); show('v-dash'); }
+    else show('v-login');
+  } catch(e) {
+    console.error('Erreur init:', e);
+    show('v-login');
+    document.getElementById('li-err').textContent =
+      '⚠️ Erreur d\'initialisation : ' + e.message + '. Rafraîchis la page.';
+    document.getElementById('li-err').style.display = 'block';
+  }
 }
 
 // ============================================================
