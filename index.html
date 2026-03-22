@@ -6,6 +6,7 @@
 <title>DéfiniFWB — Définitions interactives pour TBI</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="config.js"></script>
 <style>
 /* ===== RESET & BASE ===== */
@@ -54,7 +55,18 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
 .badge-g{background:var(--gl);color:#065F46}.badge-off{background:var(--bg3);color:var(--tx3)}
 
 /* ===== WORD EDITOR ===== */
-.word-row{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rmd);padding:12px;margin-bottom:8px;display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:start}
+.word-row{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rmd);padding:12px;margin-bottom:8px}
+.word-row-top{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:start;margin-bottom:8px}
+.word-row-img{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--bd);flex-wrap:wrap}
+.word-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--bd);flex-shrink:0}
+.img-upload-btn{cursor:pointer;margin:0}
+.img-upload-btn input{display:none}
+
+/* ===== PRINT ===== */
+@media print {
+  .no-print{display:none!important}
+  body{background:#fff}
+}
 
 /* ===== MODE SELECTOR ===== */
 .mode-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:16px}
@@ -285,6 +297,7 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
       <div class="hdr-r">
         <span id="sess-badge"></span>
         <button class="btn btn-sm" id="btn-act" onclick="toggleActivate()">○ Activer</button>
+        <button class="btn btn-sm" onclick="printFiche()">🖨️ Fiche</button>
         <button class="btn btn-sm" onclick="goToStats()">📊 Stats</button>
       </div>
     </div>
@@ -343,9 +356,40 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
 
     <!-- PDF area -->
     <div id="area-pdf" style="display:none;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rr);padding:16px;margin-top:14px">
-      <div style="font-weight:700;margin-bottom:8px">Import PDF</div>
-      <p class="hint">📋 Fonctionnalité prévue en Sprint 3.<br>En attendant : ouvre ton PDF, sélectionne le tableau, copie → colle dans l'onglet CSV.</p>
-      <button class="btn btn-sm" style="margin-top:10px" onclick="toggleArea('pdf')">Fermer</button>
+      <div style="font-weight:700;margin-bottom:10px">Import PDF</div>
+
+      <!-- Étape 1 : sélection fichier -->
+      <div id="pdf-step1">
+        <p class="hint" style="margin-bottom:10px">Sélectionne ton fichier PDF (fiche de cours, manuel...) :</p>
+        <input type="file" id="pdf-file" accept=".pdf" onchange="handlePDFFile(this)"
+          style="font-size:13px;border:none;padding:0;background:none">
+        <div id="pdf-loading" style="display:none;margin-top:10px;color:var(--p);font-size:13px">
+          ⏳ Extraction du texte en cours...
+        </div>
+      </div>
+
+      <!-- Étape 2 : édition texte extrait -->
+      <div id="pdf-step2" style="display:none">
+        <p class="hint" style="margin-bottom:8px">Texte extrait — vérifie et corrige si besoin.
+          Format attendu : <b>mot : définition</b> (ou séparé par –, ,, ;)</p>
+        <textarea id="pdf-text" rows="8" placeholder="Texte extrait du PDF..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-p btn-sm" onclick="convertPDFText()">🔍 Détecter les paires</button>
+          <button class="btn btn-sm" onclick="resetPDF()">↩ Recommencer</button>
+        </div>
+      </div>
+
+      <!-- Étape 3 : prévisualisation avant import -->
+      <div id="pdf-step3" style="display:none">
+        <p class="hint" style="margin-bottom:8px">Vérifie et ajuste les paires détectées :</p>
+        <div id="pdf-preview"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-p btn-sm" onclick="confirmPDFImport()">✅ Importer tout</button>
+          <button class="btn btn-sm" onclick="resetPDF()">↩ Recommencer</button>
+        </div>
+      </div>
+
+      <button class="btn btn-sm" style="margin-top:12px" onclick="toggleArea('pdf')">Fermer</button>
     </div>
 
     <!-- Voice area -->
@@ -681,19 +725,32 @@ function renderWords() {
   }
   list.innerHTML = mots.map((m, i) => `
     <div class="word-row">
-      <div>
-        <label>Mot ${i+1}</label>
-        <input type="text" value="${esc(m.mot)}"
-          onblur="updWord('${m.id}','mot',this.value)"
-          placeholder="mot ou expression">
+      <div class="word-row-top">
+        <div>
+          <label>Mot ${i+1}</label>
+          <input type="text" value="${esc(m.mot)}"
+            onblur="updWord('${m.id}','mot',this.value)"
+            placeholder="mot ou expression">
+        </div>
+        <div>
+          <label>Définition</label>
+          <textarea onblur="updWord('${m.id}','definition',this.value)"
+            rows="2" placeholder="définition claire et concise">${esc(m.definition)}</textarea>
+        </div>
+        <div style="padding-top:22px">
+          <button class="btn btn-sm btn-r" onclick="delWord('${m.id}')">🗑️</button>
+        </div>
       </div>
-      <div>
-        <label>Définition</label>
-        <textarea onblur="updWord('${m.id}','definition',this.value)"
-          rows="2" placeholder="définition claire et concise">${esc(m.definition)}</textarea>
-      </div>
-      <div style="padding-top:22px">
-        <button class="btn btn-sm btn-r" onclick="delWord('${m.id}')">🗑️</button>
+      <div class="word-row-img">
+        ${m.image_url
+          ? `<img class="word-thumb" src="${esc(m.image_url)}" alt="">
+             <span style="font-size:12px;color:var(--tx2);flex:1">Image ajoutée ✅</span>
+             <button class="btn btn-sm btn-r" onclick="removeImg('${m.id}')">✕</button>`
+          : `<span style="font-size:12px;color:var(--tx3)">Aucune image</span>`}
+        <label class="btn btn-sm img-upload-btn">
+          🖼️ ${m.image_url ? 'Changer' : 'Ajouter image'}
+          <input type="file" accept="image/*" onchange="uploadImg('${m.id}',this)">
+        </label>
       </div>
     </div>`).join('');
 }
@@ -719,6 +776,182 @@ async function delWord(id) {
   if (!confirm('Supprimer ce mot ?')) return;
   await sb.from('def_mots').delete().eq('id', id);
   mots = mots.filter(m => m.id !== id); renderWords();
+}
+
+// ============================================================
+// SPRINT 3 — PDF IMPORT
+// ============================================================
+let pdfRows = [];
+
+async function handlePDFFile(input) {
+  if (!input.files[0]) return;
+  document.getElementById('pdf-loading').style.display = 'block';
+  document.getElementById('pdf-step2').style.display = 'none';
+  try {
+    // Initialise le worker PDF.js
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    } else {
+      throw new Error('pdf.js non chargé');
+    }
+    const text = await extractPDFText(input.files[0]);
+    document.getElementById('pdf-text').value = text;
+    document.getElementById('pdf-loading').style.display = 'none';
+    document.getElementById('pdf-step2').style.display = 'block';
+  } catch(e) {
+    document.getElementById('pdf-loading').style.display = 'none';
+    toast('Erreur lecture PDF : ' + e.message, 4000);
+  }
+}
+
+async function extractPDFText(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let full = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    let lastY = null, line = '';
+    for (const item of content.items) {
+      if (lastY !== null && Math.abs(item.transform[5] - lastY) > 3) {
+        full += line.trim() + '\n'; line = '';
+      }
+      line += item.str; lastY = item.transform[5];
+    }
+    if (line.trim()) full += line.trim() + '\n';
+  }
+  return full.trim();
+}
+
+function convertPDFText() {
+  const raw = document.getElementById('pdf-text').value;
+  const lines = raw.split('\n').filter(l => l.trim());
+  pdfRows = [];
+  const SEPS = [' : ', ' – ', ' — ', ' - ', ':', ';', ','];
+  for (const line of lines) {
+    for (const sep of SEPS) {
+      const idx = line.indexOf(sep);
+      if (idx > 0) {
+        const mot = line.substring(0, idx).trim();
+        const def = line.substring(idx + sep.length).trim();
+        if (mot && def && mot.length < 80) { pdfRows.push({ mot, def }); break; }
+      }
+    }
+  }
+  if (!pdfRows.length) {
+    toast('Aucune paire détectée — vérifie le format du texte');
+    return;
+  }
+  document.getElementById('pdf-preview').innerHTML = pdfRows.map((r, i) => `
+    <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:6px;margin-bottom:6px;align-items:center">
+      <input type="text" value="${esc(r.mot)}"
+        onchange="pdfRows[${i}].mot=this.value" style="font-size:13px;padding:6px 8px">
+      <input type="text" value="${esc(r.def)}"
+        onchange="pdfRows[${i}].def=this.value" style="font-size:13px;padding:6px 8px">
+      <button class="btn btn-sm btn-r" onclick="pdfRows.splice(${i},1);convertPDFText()">✕</button>
+    </div>`).join('');
+  document.getElementById('pdf-step2').style.display = 'none';
+  document.getElementById('pdf-step3').style.display = 'block';
+}
+
+async function confirmPDFImport() {
+  if (!pdfRows.length) return;
+  const rows = pdfRows.map((r, i) => ({
+    session_id: sessId, mot: r.mot, definition: r.def, ordre: mots.length + i
+  }));
+  const { data, error } = await sb.from('def_mots').insert(rows).select();
+  if (error) return toast('Erreur : ' + error.message);
+  mots.push(...data);
+  renderWords();
+  resetPDF();
+  toggleArea('pdf');
+  toast(`${rows.length} mot(s) importé(s) depuis le PDF ✅`);
+}
+
+function resetPDF() {
+  document.getElementById('pdf-step1').style.display = 'block';
+  document.getElementById('pdf-step2').style.display = 'none';
+  document.getElementById('pdf-step3').style.display = 'none';
+  const fi = document.getElementById('pdf-file');
+  if (fi) fi.value = '';
+  pdfRows = [];
+}
+
+// ============================================================
+// SPRINT 3 — IMAGE PAR MOT
+// ============================================================
+async function uploadImg(motId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${user.id}/${motId}.${ext}`;
+  toast('⏳ Upload image...');
+  const { error } = await sb.storage.from('def-images').upload(path, file, { upsert: true });
+  if (error) {
+    if (error.message?.toLowerCase().includes('bucket')) {
+      toast('⚠️ Bucket "def-images" manquant — voir README pour créer le bucket Supabase', 6000);
+    } else {
+      toast('Erreur upload : ' + error.message, 4000);
+    }
+    return;
+  }
+  const { data: { publicUrl } } = sb.storage.from('def-images').getPublicUrl(path);
+  await updWord(motId, 'image_url', publicUrl);
+  const idx = mots.findIndex(m => m.id === motId);
+  if (idx >= 0) mots[idx].image_url = publicUrl;
+  renderWords();
+  toast('Image ajoutée ✅');
+}
+
+async function removeImg(motId) {
+  await updWord(motId, 'image_url', null);
+  const idx = mots.findIndex(m => m.id === motId);
+  if (idx >= 0) mots[idx].image_url = null;
+  renderWords();
+  toast('Image supprimée');
+}
+
+// ============================================================
+// SPRINT 3 — EXPORT / IMPRESSION FICHE
+// ============================================================
+function printFiche() {
+  if (!mots.length) return toast('Aucun mot à imprimer');
+  const titre = sessData?.titre || 'Séance';
+  const date  = sessData?.date ? fmtDate(sessData.date) : '';
+  const rows  = mots.map(m => `
+    <tr>
+      <td style="width:28%;font-weight:700;padding:10px 14px;border-bottom:1px solid #E2E8F0;vertical-align:top">
+        ${esc(m.mot)}
+        ${m.image_url ? `<br><img src="${esc(m.image_url)}" style="max-width:80px;max-height:60px;margin-top:6px;border-radius:6px;object-fit:cover">` : ''}
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #E2E8F0;vertical-align:top;font-size:15px;line-height:1.5">
+        ${esc(m.definition)}
+      </td>
+    </tr>`).join('');
+  const html = `<!DOCTYPE html><html><head>
+    <meta charset="UTF-8"><title>${esc(titre)}</title>
+    <style>
+      body{font-family:'Segoe UI',sans-serif;padding:28px;color:#0F172A;font-size:14px}
+      h1{color:#4F46E5;font-size:22px;margin-bottom:2px}
+      .sub{color:#64748B;font-size:13px;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#EEF2FF;color:#4F46E5;padding:10px 14px;text-align:left;font-size:13px;font-weight:700}
+      tr:nth-child(even) td{background:#F8FAFC}
+      @media print{body{padding:12px}}
+    </style></head><body>
+    <h1>📖 ${esc(titre)}</h1>
+    <div class="sub">${date} · ${mots.length} mot(s)</div>
+    <table>
+      <thead><tr><th>Mot</th><th>Définition</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) return toast('Autorise les pop-ups dans le navigateur');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
 }
 
 // ============================================================
