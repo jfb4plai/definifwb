@@ -147,6 +147,44 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
 .quiz-score{font-size:72px;font-weight:900;color:var(--p);line-height:1}
 .quiz-score-sub{font-size:20px;color:var(--tx2);margin-top:8px}
 .quiz-emoji{font-size:40px;margin:20px 0}
+
+/* Mode 2 — Clavier guidé */
+.clavier-wrap{max-width:680px;margin:0 auto}
+.clavier-progress{font-size:14px;color:var(--tx3);margin-bottom:14px}
+.clavier-def{background:var(--pl);border-radius:var(--rr);padding:20px 24px;font-size:20px;color:var(--tx);line-height:1.55;margin-bottom:18px;text-align:center;border:1px solid var(--pm)}
+.clavier-input-box{font-size:30px;font-weight:800;color:var(--p);letter-spacing:3px;text-align:center;padding:14px 20px;background:var(--bg);border:2px solid var(--pm);border-radius:var(--rmd);margin-bottom:12px;min-height:64px;word-break:break-all;transition:border-color .2s,color .2s}
+.clavier-input-box.correct{border-color:var(--g);color:#065F46;background:var(--gl)}
+.clavier-input-box.wrong{border-color:var(--r);color:#7F1D1D;background:var(--rl)}
+.clavier-feedback{font-size:16px;font-weight:600;text-align:center;padding:10px 14px;border-radius:var(--rmd);margin-bottom:12px;display:none}
+.clavier-feedback.ok{background:var(--gl);color:#065F46;display:block}
+.clavier-feedback.ko{background:var(--rl);color:#7F1D1D;display:block}
+.kb-wrap{display:flex;flex-direction:column;gap:6px;align-items:center}
+.kb-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
+.kb-key{min-width:46px;height:52px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--bg);font-size:17px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0 8px;font-family:var(--ff);user-select:none;-webkit-tap-highlight-color:transparent;transition:background .1s,transform .08s}
+.kb-key:active{background:var(--pm);transform:scale(.92)}
+.kb-key.accent{background:var(--pl);color:var(--p);border-color:var(--pm)}
+.kb-key.kback{background:var(--rl);color:#7F1D1D;border-color:var(--rm);min-width:58px}
+.kb-key.kval{background:var(--p);color:#fff;border-color:var(--pd);min-width:100px;font-size:15px}
+
+/* Mode 4 — Retrouver le mot */
+.retrouver-wrap{max-width:620px;margin:0 auto}
+.retrouver-def{font-size:22px;color:var(--tx);line-height:1.55;background:var(--pl);border:1px solid var(--pm);border-radius:var(--rr);padding:24px;margin-bottom:24px;text-align:center}
+.retrouver-choices{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.retrouver-choice{background:var(--bg2);border:2px solid var(--bd);border-radius:var(--rmd);padding:22px 14px;cursor:pointer;font-size:22px;font-weight:800;text-align:center;transition:all .15s;font-family:var(--ff);word-break:break-word;line-height:1.2;color:var(--tx);user-select:none;-webkit-tap-highlight-color:transparent}
+.retrouver-choice:hover:not(:disabled){border-color:var(--pm);background:var(--pl)}
+.retrouver-choice.correct{border-color:var(--g);background:var(--gl);color:#065F46}
+.retrouver-choice.wrong{border-color:var(--r);background:var(--rl);color:#7F1D1D}
+
+/* Mode 6 — Indice progressif */
+.indice-wrap{max-width:640px;margin:0 auto;text-align:center}
+.indice-bar{height:6px;background:var(--bg3);border-radius:100px;margin-bottom:16px;overflow:hidden}
+.indice-bar-fill{height:100%;background:var(--pm);border-radius:100px;transition:width .5s}
+.indice-progress{font-size:14px;color:var(--tx3);margin-bottom:12px}
+.indice-mot{font-size:44px;font-weight:900;color:var(--p);margin-bottom:20px;word-break:break-word;line-height:1.15}
+.indice-def-box{font-size:24px;color:var(--tx);line-height:1.6;min-height:90px;padding:20px 24px;background:var(--bg2);border-radius:var(--rr);margin-bottom:20px;text-align:left}
+.iw{display:inline;transition:opacity .35s}
+.iw.hidden{opacity:0;color:transparent;user-select:none}
+.indice-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -367,11 +405,11 @@ label{font-size:13px;color:var(--tx2);display:block;margin-bottom:4px}
 // ============================================================
 const MODES = {
   cliquable: { icon:'👆', label:'Mot cliquable',     desc:'Touche un mot pour voir sa définition', ready:true },
-  clavier:   { icon:'⌨️', label:'Clavier guidé',     desc:'Tape le mot à partir de la définition',  ready:false },
+  clavier:   { icon:'⌨️', label:'Clavier guidé',     desc:'Tape le mot à partir de la définition',  ready:true },
   relier:    { icon:'🔗', label:'Relier',             desc:'Relie chaque mot à sa définition',       ready:true },
-  retrouver: { icon:'🔍', label:'Retrouver le mot',  desc:'Trouve le mot d\'une définition',         ready:false },
+  retrouver: { icon:'🔍', label:'Retrouver le mot',  desc:'Trouve le mot d\'une définition',         ready:true },
   quiz:      { icon:'❓', label:'Quiz flash',         desc:'Choix multiples générés automatiquement',ready:true },
-  indice:    { icon:'💡', label:'Indice progressif', desc:'La définition se révèle mot par mot',     ready:false }
+  indice:    { icon:'💡', label:'Indice progressif', desc:'La définition se révèle mot par mot',     ready:true }
 };
 
 // ============================================================
@@ -380,10 +418,12 @@ const MODES = {
 let sb, user;
 let sessId = null, sessData = null, mots = [];
 let voiceRec = null, voiceOn = false;
-let curDef = null;          // mot currently shown in overlay
+let curDef = null;                        // mot affiché dans l'overlay
 let quizQ = [], quizIdx = 0, quizScore = 0;
-let relierSel = null;       // selected mot id
-let relierLinks = {};       // motId -> defId (correct connections)
+let relierSel = null, relierLinks = {};
+let clavierState = {};                    // Mode 2
+let retrouverState = {};                  // Mode 4
+let indiceState = {}, currentIndiceMot = null; // Mode 6
 
 // ============================================================
 // INIT
@@ -816,9 +856,12 @@ function renderMode(mode) {
       <div style="font-size:18px">Ce mode arrive prochainement !</div>
     </div>`; return;
   }
-  if (mode === 'cliquable') renderMode1();
-  else if (mode === 'relier') renderMode3();
-  else if (mode === 'quiz')   renderMode5();
+  if      (mode === 'cliquable') renderMode1();
+  else if (mode === 'relier')    renderMode3();
+  else if (mode === 'quiz')      renderMode5();
+  else if (mode === 'clavier')   renderMode2();
+  else if (mode === 'retrouver') renderMode4();
+  else if (mode === 'indice')    renderMode6();
 }
 
 // ============================================================
@@ -989,6 +1032,210 @@ function showQuizEnd() {
 }
 
 // ============================================================
+// MODE 2 — CLAVIER GUIDÉ
+// ============================================================
+const KB_ROWS = [
+  ['A','Z','E','R','T','Y','U','I','O','P'],
+  ['Q','S','D','F','G','H','J','K','L','M'],
+  ['W','X','C','V','B','N','⌫'],
+  ['é','è','ê','à','â','ù','û','ç','î','ï','ô','œ','æ']
+];
+
+function renderMode2() {
+  if (!mots.length) return;
+  clavierState = { idx: 0, typed: '', score: 0, list: shuffle([...mots]) };
+  showClavierQ();
+}
+function showClavierQ() {
+  const { idx, list } = clavierState;
+  if (idx >= list.length) { showClavierEnd(); return; }
+  const m = list[idx];
+  document.getElementById('el-body').innerHTML = `
+    <div class="clavier-wrap">
+      <div class="clavier-progress">Mot ${idx+1} / ${list.length}</div>
+      <div class="clavier-def">${esc(m.definition)}</div>
+      <div class="clavier-input-box" id="cl-inp">_</div>
+      <div class="clavier-feedback" id="cl-fb"></div>
+      <div class="kb-wrap">
+        ${KB_ROWS.map((row, ri) => `
+          <div class="kb-row">
+            ${row.map(k => `<button class="kb-key ${k==='⌫'?'kback':''} ${ri===3?'accent':''}"
+              onclick="kbKey('${k}')">${k}</button>`).join('')}
+            ${ri===1 ? '<button class="kb-key kval" onclick="kbValidate()">✓ Valider</button>' : ''}
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+        <button class="btn btn-sm" onclick="kbSkip()">⏭ Passer</button>
+      </div>
+    </div>`;
+}
+function kbKey(k) {
+  const el = document.getElementById('cl-inp');
+  if (!el || el.classList.contains('correct')) return;
+  if (k === '⌫') clavierState.typed = clavierState.typed.slice(0,-1);
+  else clavierState.typed += k.toLowerCase();
+  el.textContent = clavierState.typed || '_';
+}
+function kbValidate() {
+  const m = clavierState.list[clavierState.idx];
+  const ok = normalize(clavierState.typed) === normalize(m.mot);
+  const inp = document.getElementById('cl-inp');
+  const fb  = document.getElementById('cl-fb');
+  inp.className = 'clavier-input-box ' + (ok ? 'correct' : 'wrong');
+  fb.className  = 'clavier-feedback ' + (ok ? 'ok' : 'ko');
+  fb.textContent = ok
+    ? `✅ Bravo ! "${m.mot}" est correct !`
+    : `❌ La réponse était : ${m.mot}`;
+  if (ok) clavierState.score++;
+  // Disable keyboard
+  document.querySelectorAll('.kb-key').forEach(b => b.disabled = true);
+  setTimeout(() => { clavierState.idx++; clavierState.typed = ''; showClavierQ(); }, 1600);
+}
+function kbSkip() { clavierState.idx++; clavierState.typed = ''; showClavierQ(); }
+function showClavierEnd() {
+  const { score, list } = clavierState;
+  const pct = Math.round(score/list.length*100);
+  document.getElementById('el-body').innerHTML = `
+    <div class="quiz-end">
+      <div class="quiz-score">${score}/${list.length}</div>
+      <div class="quiz-score-sub">mots correctement écrits</div>
+      <div class="quiz-emoji">${pct>=80?'🎉':pct>=50?'💪':'📚'}</div>
+      <button class="btn btn-p" style="font-size:16px;padding:12px 28px" onclick="renderMode2()">🔄 Recommencer</button>
+    </div>`;
+}
+
+// ============================================================
+// MODE 4 — RETROUVER LE MOT
+// ============================================================
+function renderMode4() {
+  if (mots.length < 2) {
+    document.getElementById('el-body').innerHTML =
+      '<div class="empty"><div style="font-size:48px">⚠️</div><div style="margin-top:12px;font-size:18px">Il faut au moins 2 mots</div></div>';
+    return;
+  }
+  retrouverState = { questions: buildRetroQuestions(), idx: 0, score: 0 };
+  showRetroQ();
+}
+function buildRetroQuestions() {
+  return shuffle([...mots]).map(m => {
+    const wrong = shuffle(mots.filter(x => x.id !== m.id)).slice(0, 3);
+    return { mot: m, choices: shuffle([m, ...wrong]), correctId: m.id };
+  });
+}
+function showRetroQ() {
+  const { questions, idx } = retrouverState;
+  if (idx >= questions.length) { showRetroEnd(); return; }
+  const q = questions[idx];
+  document.getElementById('el-body').innerHTML = `
+    <div class="retrouver-wrap">
+      <div class="clavier-progress">Définition ${idx+1} / ${questions.length}</div>
+      <div class="retrouver-def">${esc(q.mot.definition)}</div>
+      <div class="retrouver-choices">
+        ${q.choices.map(c => `
+          <button class="retrouver-choice" data-id="${c.id}"
+            onclick="answerRetro(this,'${c.id}','${q.correctId}')">
+            ${esc(c.mot)}
+          </button>`).join('')}
+      </div>
+    </div>`;
+}
+function answerRetro(btn, choiceId, correctId) {
+  document.querySelectorAll('.retrouver-choice').forEach(b => b.disabled = true);
+  const ok = choiceId === correctId;
+  if (ok) { btn.classList.add('correct'); retrouverState.score++; }
+  else {
+    btn.classList.add('wrong');
+    document.querySelector(`.retrouver-choice[data-id="${correctId}"]`)?.classList.add('correct');
+  }
+  retrouverState.idx++;
+  setTimeout(showRetroQ, 1300);
+}
+function showRetroEnd() {
+  const { score, questions } = retrouverState;
+  const pct = Math.round(score/questions.length*100);
+  document.getElementById('el-body').innerHTML = `
+    <div class="quiz-end">
+      <div class="quiz-score">${score}/${questions.length}</div>
+      <div class="quiz-score-sub">${pct}% de bonnes réponses</div>
+      <div class="quiz-emoji">${pct>=80?'🎉':pct>=50?'💪':'📚'}</div>
+      <button class="btn btn-p" style="font-size:16px;padding:12px 28px" onclick="renderMode4()">🔄 Recommencer</button>
+    </div>`;
+}
+
+// ============================================================
+// MODE 6 — INDICE PROGRESSIF
+// ============================================================
+function renderMode6() {
+  if (!mots.length) return;
+  indiceState = { list: shuffle([...mots]), idx: 0 };
+  showIndiceCard();
+}
+function showIndiceCard() {
+  const { list, idx } = indiceState;
+  if (idx >= list.length) { showIndiceEnd(); return; }
+  const m = list[idx];
+  currentIndiceMot = m;
+  const words = m.definition.split(' ');
+  indiceState.words = words;
+  indiceState.wordIdx = 0;
+  const pct = Math.round(idx / list.length * 100);
+  document.getElementById('el-body').innerHTML = `
+    <div class="indice-wrap">
+      <div class="indice-bar"><div class="indice-bar-fill" style="width:${pct}%"></div></div>
+      <div class="indice-progress">Mot ${idx+1} / ${list.length}</div>
+      <div class="indice-mot">${esc(m.mot)}</div>
+      <div class="indice-def-box" id="ind-def">
+        ${words.map((w,i) => `<span class="iw hidden" id="iw-${i}">${esc(w)}</span> `).join('')}
+      </div>
+      <div class="indice-btns">
+        <button class="btn-tbi" style="background:var(--p);border-color:var(--pd);color:#fff"
+          onclick="indiceNext1()">💡 Mot suivant</button>
+        <button class="btn-tbi" style="background:rgba(0,0,0,.07);color:var(--tx);border-color:var(--bd2)"
+          onclick="indiceAll()">👁 Tout révéler</button>
+        <button class="btn-tbi" style="background:rgba(0,0,0,.07);color:var(--tx);border-color:var(--bd2)"
+          onclick="speakCurIndice()">🔊 Écouter</button>
+      </div>
+      <div id="ind-next-wrap" style="display:none;margin-top:18px;text-align:center">
+        <button class="btn btn-p" style="font-size:16px;padding:12px 28px" onclick="indiceGo()">
+          Mot suivant →
+        </button>
+      </div>
+    </div>`;
+}
+function indiceNext1() {
+  const { words, wordIdx } = indiceState;
+  if (wordIdx >= words.length) { showIndiceNextBtn(); return; }
+  const el = document.getElementById('iw-' + wordIdx);
+  if (el) el.classList.remove('hidden');
+  indiceState.wordIdx++;
+  if (indiceState.wordIdx >= words.length) showIndiceNextBtn();
+}
+function indiceAll() {
+  indiceState.words.forEach((_,i) => {
+    document.getElementById('iw-' + i)?.classList.remove('hidden');
+  });
+  indiceState.wordIdx = indiceState.words.length;
+  showIndiceNextBtn();
+}
+function showIndiceNextBtn() {
+  const w = document.getElementById('ind-next-wrap');
+  if (w) w.style.display = 'block';
+}
+function indiceGo() { indiceState.idx++; showIndiceCard(); }
+function speakCurIndice() {
+  if (currentIndiceMot) speak(currentIndiceMot.mot + '. ' + currentIndiceMot.definition);
+}
+function showIndiceEnd() {
+  document.getElementById('el-body').innerHTML = `
+    <div class="quiz-end">
+      <div style="font-size:56px">✅</div>
+      <div class="quiz-score-sub" style="font-size:22px;margin-top:12px">Tous les mots ont été explorés !</div>
+      <div class="quiz-emoji">🎉</div>
+      <button class="btn btn-p" style="font-size:16px;padding:12px 28px" onclick="renderMode6()">🔄 Recommencer</button>
+    </div>`;
+}
+
+// ============================================================
 // TTS
 // ============================================================
 function speak(txt) {
@@ -1007,6 +1254,11 @@ function speakAll() {
 // ============================================================
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function normalize(s) {
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .trim();
 }
 function fmtDate(d) {
   if (!d) return '';
